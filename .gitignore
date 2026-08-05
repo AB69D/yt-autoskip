@@ -46,3 +46,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing secrets — never commit these to this public repo.
+# See android/key.properties.example for the template, and the README for setup.
+/android/key.properties
+/android/keystore/
+*.jks
+*.keystore

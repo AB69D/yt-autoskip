@@ -11,9 +11,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'YT AutoSkip',
+      title: 'SkipWise',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4F46E5)),
         useMaterial3: true,
       ),
       home: const HomePage(),
@@ -29,7 +29,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  static const _channel = MethodChannel('com.devconnectx.ytautoskip/accessibility');
+  static const _channel = MethodChannel('com.devconnectx.skipwise/accessibility');
 
   bool _serviceEnabled = false;
   bool _batteryUnrestricted = false;
@@ -84,7 +84,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('YT AutoSkip')),
+      appBar: AppBar(title: const Text('SkipWise')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   _ChecklistTile(
                     done: null,
                     title: 'Lock the app in Recents',
-                    subtitle: 'Open Recents (square button), find YT AutoSkip, tap the '
+                    subtitle: 'Open Recents (square button), find SkipWise, tap the '
                         'lock icon on its card. Swiping it away without locking lets '
                         'MIUI kill it.',
                     buttonLabel: null,

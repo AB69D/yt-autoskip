@@ -1,4 +1,4 @@
-package com.devconnectx.ytautoskip
+package com.devconnectx.skipwise
 
 import android.content.ComponentName
 import android.content.Intent
@@ -12,7 +12,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val channelName = "com.devconnectx.ytautoskip/accessibility"
+    private val channelName = "com.devconnectx.skipwise/accessibility"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -24,8 +24,8 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "getSkipCount" -> {
-                    val prefs = getSharedPreferences(YoutubeAdSkipService.PREFS_NAME, MODE_PRIVATE)
-                    result.success(prefs.getInt(YoutubeAdSkipService.KEY_COUNT, 0))
+                    val prefs = getSharedPreferences(AdSkipAccessibilityService.PREFS_NAME, MODE_PRIVATE)
+                    result.success(prefs.getInt(AdSkipAccessibilityService.KEY_COUNT, 0))
                 }
                 "isIgnoringBatteryOptimizations" -> result.success(isIgnoringBatteryOptimizations())
                 "requestIgnoreBatteryOptimizations" -> {
@@ -71,11 +71,11 @@ class MainActivity : FlutterActivity() {
     }
 
     // Compares parsed ComponentNames rather than raw strings: MIUI (and some AOSP paths)
-    // stores the shorthand ".YoutubeAdSkipService" form here instead of the fully-qualified
+    // stores the shorthand ".AdSkipAccessibilityService" form here instead of the fully-qualified
     // class name, which a plain string-equals check misses — reporting OFF even when the
     // system's own Accessibility settings screen shows the service On.
     private fun isServiceEnabled(): Boolean {
-        val target = ComponentName(this, YoutubeAdSkipService::class.java)
+        val target = ComponentName(this, AdSkipAccessibilityService::class.java)
         val enabledServices = Settings.Secure.getString(
             contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
         ) ?: return false

@@ -1,0 +1,65 @@
+name: Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.5"
+          channel: stable
+
+      - name: Decode release keystore
+        run: |
+          mkdir -p android/keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/keystore/skipwise-upload.jks
+
+      - name: Write key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=../keystore/skipwise-upload.jks
+          EOF
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      # versionName stays whatever's in pubspec.yaml; versionCode is pinned to the CI
+      # run number so it always increases, which Android requires for every new install
+      # to be accepted as an update over the last one.
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - name: Rename APK for release
+        run: cp build/app/outputs/flutter-apk/app-release.apk SkipWise.apk
+
+      - name: Publish/update the "latest" GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "SkipWise — latest build"
+          body: |
+            Automatically built from commit ${{ github.sha }} (run #${{ github.run_number }}).
+
+            Download `SkipWise.apk` below, then open it on your Android phone to install
+            (you'll need to allow "install unknown apps" for whichever app you downloaded
+            it with — Chrome, Files, etc).
+          make_latest: true
+          files: SkipWise.apk

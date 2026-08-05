@@ -1,4 +1,4 @@
-package com.devconnectx.ytautoskip
+package com.devconnectx.skipwise
 
 import android.accessibilityservice.AccessibilityService
 import android.content.SharedPreferences
@@ -6,7 +6,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
-class YoutubeAdSkipService : AccessibilityService() {
+class AdSkipAccessibilityService : AccessibilityService() {
 
     private var lastScanTime = 0L
     private lateinit var prefs: SharedPreferences
@@ -116,11 +116,11 @@ class YoutubeAdSkipService : AccessibilityService() {
     override fun onInterrupt() {}
 
     companion object {
-        private const val TAG = "YTAutoSkip"
+        private const val TAG = "SkipWise"
         private const val SCAN_THROTTLE_MS = 250L
         private const val YOUTUBE_PKG = "com.google.android.youtube"
         private const val FACEBOOK_PKG = "com.facebook.katana"
-        const val PREFS_NAME = "ytautoskip_prefs"
+        const val PREFS_NAME = "skipwise_prefs"
         const val KEY_COUNT = "skip_count"
     }
 }
