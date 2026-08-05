@@ -1,12 +1,27 @@
 # SkipWise
 
-An Android app that automatically taps "Skip Ad" for you in the YouTube and Facebook apps, using Android's Accessibility Service — no root required.
+An app that automatically taps "Skip Ad" for you in the YouTube and Facebook Android apps, using Android's Accessibility Service — no root required.
 
 It also ships a setup checklist that walks you through the extra permissions Xiaomi/MIUI devices need, since MIUI aggressively kills background services by default and will silently turn the skipper off if you don't configure it.
 
+The Flutter UI itself also builds and runs on Windows, Linux, and macOS — see [Platform support](#platform-support) for what that does and doesn't mean.
+
 ## Download
 
-Every push to `main` builds a signed release APK and publishes it to the [Releases page](https://github.com/AB69D/yt-autoskip/releases/tag/latest) — grab `SkipWise.apk` from the latest release and install it directly (you'll need to allow "install unknown apps" for whichever app you download it with).
+Every push to `main` builds all four platforms and publishes them to the [Releases page](https://github.com/AB69D/yt-autoskip/releases/tag/latest):
+
+| Platform | File | Run it |
+|---|---|---|
+| Android | `SkipWise.apk` | Open it on your phone (allow "install unknown apps" for whichever app you downloaded it with) |
+| Windows | `SkipWise-windows.zip` | Extract, run `skipwise.exe` |
+| Linux | `SkipWise-linux.tar.gz` | Extract, run `./skipwise` from inside the extracted folder |
+| macOS | `SkipWise-macos.zip` | Extract, right-click `SkipWise.app` → Open (unsigned — no Apple Developer certificate — so Gatekeeper needs that once) |
+
+## Platform support
+
+**Only the Android build actually skips ads.** The mechanism this app is built around — an Accessibility Service that watches the YouTube/Facebook Android apps' screens and taps "Skip Ad" — only exists on Android; Windows, Linux, and macOS don't run those mobile apps, so there's nothing for it to act on there.
+
+The Windows/Linux/macOS builds are the same Flutter UI shell, provided so the project can be built, run, and inspected on desktop. On those platforms the app detects it isn't on Android and shows an explanatory screen instead of the accessibility status card ([`lib/main.dart`](lib/main.dart), see `_isAndroid` / `_DesktopNoticeView`).
 
 ## Features
 
@@ -26,9 +41,8 @@ The Flutter UI ([`lib/main.dart`](lib/main.dart)) talks to the native Android si
 
 ## Requirements
 
-- Android device (the accessibility service is Android-only; there is no iOS implementation)
+- To actually skip ads: an Android device, with the accessibility permission granted manually at runtime (there is no iOS implementation, and no equivalent on desktop — see [Platform support](#platform-support))
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (Dart SDK `^3.10.4`, see [`pubspec.yaml`](pubspec.yaml))
-- Android accessibility permission, granted manually by the user at runtime
 
 ## Getting started
 
@@ -57,8 +71,8 @@ Without `android/key.properties` present, release builds silently fall back to t
 
 ## CI/CD
 
-- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — runs `flutter analyze`, `flutter test`, and a debug build on every push and pull request to `main`.
-- [`.github/workflows/release.yml`](.github/workflows/release.yml) — on every push to `main`, builds a **signed** release APK and publishes/updates the [`latest` GitHub Release](https://github.com/AB69D/yt-autoskip/releases/tag/latest) with it attached. The signing keystore and passwords are stored as encrypted [repository secrets](https://github.com/AB69D/yt-autoskip/settings/secrets/actions) (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`), decoded fresh on each run — they are never written to the repo itself.
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — on every push and pull request to `main`: `flutter analyze`, `flutter test`, an Android debug build, and debug build sanity checks on `windows-latest`, `ubuntu-latest` (Linux desktop), and `macos-latest`.
+- [`.github/workflows/release.yml`](.github/workflows/release.yml) — on every push to `main`, builds all four platforms in parallel jobs and publishes/updates the [`latest` GitHub Release](https://github.com/AB69D/yt-autoskip/releases/tag/latest) with all four artifacts attached. Only the Android job signs anything — its keystore and passwords are stored as encrypted [repository secrets](https://github.com/AB69D/yt-autoskip/settings/secrets/actions) (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`), decoded fresh on each run — they are never written to the repo itself. The Windows/Linux/macOS builds are unsigned (no paid certificates for those platforms).
 
 ## Hardening / reverse-engineering resistance
 
@@ -77,12 +91,13 @@ Release builds enable R8 code shrinking, obfuscation, and resource shrinking (`i
 ## Project structure
 
 ```
-lib/main.dart                                                          Flutter UI (status card + setup checklist)
+lib/main.dart                                                          Flutter UI (status card + setup checklist + desktop notice)
 android/app/src/main/kotlin/.../MainActivity.kt                        Platform channel: settings deep-links, permission checks
 android/app/src/main/kotlin/.../AdSkipAccessibilityService.kt          Accessibility service: detects and taps "Skip Ad"
 android/app/src/main/res/xml/accessibility_service_config.xml          Accessibility service configuration
+windows/, linux/, macos/                                               Desktop runner shells (UI only — no ad-skip capability there)
 assets/icon/                                                           Source images for the app icon (regenerate via flutter_launcher_icons)
-.github/workflows/                                                     CI (analyze/test) and release (signed APK) pipelines
+.github/workflows/                                                     CI (analyze/test/build) and release (all 4 platforms) pipelines
 ```
 
 ## Play Store status

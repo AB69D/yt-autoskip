@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,7 +31,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
-  static const _channel = MethodChannel('com.devconnectx.skipwise/accessibility');
+  static const _channel = MethodChannel(
+    'com.devconnectx.skipwise/accessibility',
+  );
+
+  // The ad-skipper is an Android Accessibility Service that acts on the YouTube/Facebook
+  // Android apps — there's no equivalent to hook into on desktop, so those platforms get
+  // an explanatory screen instead of calling into the (Android-only) platform channel.
+  // Uses defaultTargetPlatform (not dart:io Platform) so tests can fake the platform via
+  // debugDefaultTargetPlatformOverride.
+  bool get _isAndroid => defaultTargetPlatform == TargetPlatform.android;
 
   bool _serviceEnabled = false;
   bool _batteryUnrestricted = false;
@@ -40,7 +51,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refresh();
+    if (_isAndroid) {
+      _refresh();
+    } else {
+      _loading = false;
+    }
   }
 
   @override
@@ -52,15 +67,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Re-check status whenever the user comes back from a system settings screen.
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _isAndroid) {
       _refresh();
     }
   }
 
   Future<void> _refresh() async {
     try {
-      final enabled = await _channel.invokeMethod<bool>('isServiceEnabled') ?? false;
-      final battery = await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations') ?? false;
+      final enabled =
+          await _channel.invokeMethod<bool>('isServiceEnabled') ?? false;
+      final battery =
+          await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations') ??
+          false;
       final count = await _channel.invokeMethod<int>('getSkipCount') ?? 0;
       if (!mounted) return;
       setState(() {
@@ -75,17 +93,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _openAccessibilitySettings() => _channel.invokeMethod('openAccessibilitySettings');
+  Future<void> _openAccessibilitySettings() =>
+      _channel.invokeMethod('openAccessibilitySettings');
 
-  Future<void> _requestBatteryExemption() => _channel.invokeMethod('requestIgnoreBatteryOptimizations');
+  Future<void> _requestBatteryExemption() =>
+      _channel.invokeMethod('requestIgnoreBatteryOptimizations');
 
-  Future<void> _openAutostartSettings() => _channel.invokeMethod('openAutostartSettings');
+  Future<void> _openAutostartSettings() =>
+      _channel.invokeMethod('openAutostartSettings');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('SkipWise')),
-      body: _loading
+      body: !_isAndroid
+          ? const _DesktopNoticeView()
+          : _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _refresh,
@@ -98,7 +121,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       child: Column(
                         children: [
                           Icon(
-                            _serviceEnabled ? Icons.check_circle : Icons.error_outline,
+                            _serviceEnabled
+                                ? Icons.check_circle
+                                : Icons.error_outline,
                             color: _serviceEnabled ? Colors.green : Colors.red,
                             size: 56,
                           ),
@@ -120,7 +145,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Setup checklist', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Setup checklist',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const Text(
                     'MIUI kills background apps aggressively by default — these three '
                     'steps stop it from silently switching the skipper off.',
@@ -129,28 +157,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   _ChecklistTile(
                     done: _serviceEnabled,
                     title: 'Accessibility permission',
-                    subtitle: 'Required so the app can read the screen and tap Skip.',
+                    subtitle:
+                        'Required so the app can read the screen and tap Skip.',
                     buttonLabel: 'Open Accessibility Settings',
                     onPressed: _openAccessibilitySettings,
                   ),
                   _ChecklistTile(
                     done: _batteryUnrestricted,
                     title: 'Unrestricted battery use',
-                    subtitle: 'Stops MIUI from freezing the app in the background.',
+                    subtitle:
+                        'Stops MIUI from freezing the app in the background.',
                     buttonLabel: 'Allow unrestricted battery use',
                     onPressed: _requestBatteryExemption,
                   ),
                   _ChecklistTile(
-                    done: null, // no public API to check this — always actionable
+                    done:
+                        null, // no public API to check this — always actionable
                     title: 'Xiaomi Autostart permission',
-                    subtitle: 'Lets the app relaunch itself if MIUI ever kills it.',
+                    subtitle:
+                        'Lets the app relaunch itself if MIUI ever kills it.',
                     buttonLabel: 'Open Autostart settings',
                     onPressed: _openAutostartSettings,
                   ),
                   _ChecklistTile(
                     done: null,
                     title: 'Lock the app in Recents',
-                    subtitle: 'Open Recents (square button), find SkipWise, tap the '
+                    subtitle:
+                        'Open Recents (square button), find SkipWise, tap the '
                         'lock icon on its card. Swiping it away without locking lets '
                         'MIUI kill it.',
                     buttonLabel: null,
@@ -166,6 +199,48 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _DesktopNoticeView extends StatelessWidget {
+  const _DesktopNoticeView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.desktop_windows_outlined,
+                size: 56,
+                color: Colors.grey.shade600,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Ad-skipping is Android-only',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'SkipWise works by using Android\'s Accessibility Service to tap "Skip Ad" '
+                'inside the YouTube and Facebook Android apps. Windows, Linux, and macOS '
+                'don\'t run those apps, so there\'s nothing for this feature to act on here.\n\n'
+                'This desktop build exists so the project can be built and inspected on '
+                'every platform, but the automatic ad-skipping itself only runs on an '
+                'Android phone or tablet with the app installed.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -198,8 +273,8 @@ class _ChecklistTile extends StatelessWidget {
               done == true
                   ? Icons.check_circle
                   : done == false
-                      ? Icons.radio_button_unchecked
-                      : Icons.info_outline,
+                  ? Icons.radio_button_unchecked
+                  : Icons.info_outline,
               color: done == true ? Colors.green : Colors.grey,
             ),
             const SizedBox(width: 12),
@@ -212,7 +287,10 @@ class _ChecklistTile extends StatelessWidget {
                   Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
                   if (buttonLabel != null) ...[
                     const SizedBox(height: 8),
-                    OutlinedButton(onPressed: onPressed, child: Text(buttonLabel!)),
+                    OutlinedButton(
+                      onPressed: onPressed,
+                      child: Text(buttonLabel!),
+                    ),
                   ],
                 ],
               ),
