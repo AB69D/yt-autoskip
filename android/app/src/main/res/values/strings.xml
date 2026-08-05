@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">YT AutoSkip</string>
+    <string name="accessibility_service_description">Watches the YouTube and Facebook app screens and automatically taps the \"Skip Ad\" button as soon as it appears. It only reads and acts on those two apps\' screen content — it never accesses any other app, and no data ever leaves your device.</string>
+</resources>
