@@ -5,22 +5,21 @@ allprojects {
     }
 }
 
-// Build outputs are redirected off the project's exFAT external volume: that filesystem
-// makes macOS spawn "._" AppleDouble sidecar files next to every directory Gradle creates,
-// and AAPT2's resource-directory scan then trips over them (e.g. "._drawable-v21 is not a
-// directory"). Building on the APFS-formatted home volume avoids that entirely.
-//
-// Skipped on CI (and any other Linux/non-exFAT runner): redirecting the build dir there
-// makes `flutter build apk` unable to find its own output at the project-relative path it
-// expects, which fails the build. GitHub Actions (and most CI systems) set CI=true.
-if (System.getenv("CI") == null) {
-    val newBuildDir = File("/Users/ab9d/.flutter-android-build/skipwise")
-    rootProject.layout.buildDirectory.set(newBuildDir)
+// Build outputs are redirected outside the project tree, into the current user's home
+// directory. Locally this is required: the project lives on an exFAT external volume,
+// which makes macOS spawn "._" AppleDouble sidecar files next to every directory Gradle
+// creates, and AAPT2's resource-directory scan then trips over them (e.g. "._drawable-v21
+// is not a directory"). It's also kept on CI: `flutter build apk` was unable to locate its
+// own output ("Gradle build failed to produce an .apk file") when the build directory
+// stayed at the default project-relative path on the GitHub Actions Ubuntu runner, for
+// unrelated reasons (a "some/build/apk" watcher registered twice — the -v log showed
+// "Unable to watch same file twice via different paths"). Redirecting unblocks both.
+val newBuildDir = File(System.getProperty("user.home"), ".flutter-android-build/skipwise")
+rootProject.layout.buildDirectory.set(newBuildDir)
 
-    subprojects {
-        val newSubprojectBuildDir = newBuildDir.resolve(project.name)
-        project.layout.buildDirectory.set(newSubprojectBuildDir)
-    }
+subprojects {
+    val newSubprojectBuildDir = newBuildDir.resolve(project.name)
+    project.layout.buildDirectory.set(newSubprojectBuildDir)
 }
 subprojects {
     project.evaluationDependsOn(":app")

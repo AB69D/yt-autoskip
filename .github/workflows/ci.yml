@@ -28,4 +28,17 @@ jobs:
 
       # Debug build only, as a compile sanity check — the signed release build
       # happens in release.yml, which has the keystore secrets it needs.
-      - run: flutter build apk --debug
+      #
+      # `flutter build apk` itself is unreliable here: Gradle always produces a real APK,
+      # but flutter_tools' own step that locates/copies it intermittently reports "Gradle
+      # build failed to produce an .apk file" even though the file exists (a flutter_tools
+      # bug with this Flutter/AGP/Gradle combination, unrelated to the actual build). So
+      # `|| true` swallows that false failure, and the file's actual presence under the
+      # redirected build dir (see android/build.gradle.kts) is what really gates the step.
+      - name: Build debug APK
+        run: |
+          flutter build apk --debug || true
+          find "$HOME/.flutter-android-build/skipwise/app/outputs" -name "app-debug.apk" | grep -q . || {
+            echo "::error::Debug APK was not produced by Gradle"
+            exit 1
+          }
