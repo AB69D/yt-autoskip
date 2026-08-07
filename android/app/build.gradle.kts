@@ -62,12 +62,16 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // R8 minification/obfuscation was tried in the initial rebrand, but Google
+            // Play Protect blocks obfuscated Accessibility-Service APKs from unknown
+            // (non-Play-Store) sources much more aggressively — obfuscation is one of
+            // the signals malware uses to evade static analysis, and this app trips it
+            // even though it's not malicious. The Kotlin glue here is tiny (Flutter's
+            // engine dominates APK size), so shrinking buys negligible size savings but
+            // was making the release APK unable to install at all. Not worth the tradeoff
+            // for an app distributed via GitHub Releases rather than the Play Store.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
